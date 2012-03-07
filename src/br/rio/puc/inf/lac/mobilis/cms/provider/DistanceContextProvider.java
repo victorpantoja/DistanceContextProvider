@@ -164,7 +164,7 @@ public class DistanceContextProvider extends ContextProvider {
 		
 		if (configName.equals("destination")) {
 			Log.d(TAG, "Setando destino");
-			String url = "http://localhost:9080/context";
+			String url = "http://maps.google.com/maps/api/geocode/json?address="+ URLEncoder.encode(configValue) +"&sensor=true";
 			String result = queryRESTurl(url);  
 			try {
 				JSONObject json = new JSONObject(result);  
