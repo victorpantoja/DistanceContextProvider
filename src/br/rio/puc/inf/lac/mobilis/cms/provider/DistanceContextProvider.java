@@ -39,7 +39,7 @@ public class DistanceContextProvider extends ContextProvider {
 	private int refreshInterval;
 	private Handler handler;
 	private LocationManager lm;
-	private String currentlocation, destination;
+	private String currentlocation, destination, auth_token;
 	static final String TAG = "DistanceContextProvider";
 
 	/**
@@ -49,11 +49,12 @@ public class DistanceContextProvider extends ContextProvider {
 	 *
 	 */
 	private class DistanceGetter implements Runnable {
-		private String from, to;
+		private String from, to, auth;
 
-		DistanceGetter (String from, String to) {
+		DistanceGetter (String from, String to, String auth) {
 			this.from = from;
 			this.to = to;
+			this.auth = auth;
 		}
 
 		/**
@@ -63,32 +64,32 @@ public class DistanceContextProvider extends ContextProvider {
 		public void run() {
 			ContextInformationObject contextInformation = new ContextInformationObject("distance");
 
-			String url = "http://maps.google.com/maps/api/directions/json?origin="+from+"&destination="+to+"&sensor=true&language=pt-BR";
+			String url = "http://192.168.0.191:9080/filters/maps?origin="+from+"&destination="+to+"&filters=legs/distance,legs/duration&auth="+auth;
 			String result = queryRESTurl(url);  
 			try{
 				JSONObject json = new JSONObject(result);  
-				if (json.getString("status").equals("OK"))
-				{
-					JSONArray routesArray = json.getJSONArray("routes");
-					JSONObject routeObject = routesArray.getJSONObject(0);
+				/*JSONArray routesArray = json.getJSONArray("routes");
+				JSONObject routeObject = routesArray.getJSONObject(0);
 
-					JSONArray legsArray = routeObject.getJSONArray("legs");
-					JSONObject legsObject = legsArray.getJSONObject(0);
+				JSONArray legsArray = routeObject.getJSONArray("legs");
+				JSONObject legsObject = legsArray.getJSONObject(0);
 
-					JSONObject distanceObject = legsObject.getJSONObject("distance");
-					JSONObject durationObject = legsObject.getJSONObject("duration");
-					String distancia = distanceObject.getString("text");
-					String duracao = durationObject.getString("text");
+				JSONObject distanceObject = legsObject.getJSONObject("distance");
+				JSONObject durationObject = legsObject.getJSONObject("duration");*/
+				
+				JSONObject distanceObject = json.getJSONObject("distance");
+				JSONObject durationObject = json.getJSONObject("duration");
+				String distancia = distanceObject.getString("text");
+				String duracao = durationObject.getString("text");
 
-					Log.i(TAG,"Distancia: " + distancia + "\nDuracaoo: " + duracao);
+				Log.i(TAG,"Distancia: " + distancia + "\nDuracaoo: " + duracao);
 
-					contextInformation.addContextInformation("time",duracao);
-					contextInformation.addContextInformation("meters",distancia);
-					sendUpdatedInformation(contextInformation);
-				}
+				contextInformation.addContextInformation("time",duracao);
+				contextInformation.addContextInformation("meters",distancia);
+				sendUpdatedInformation(contextInformation);
 			}  
 			catch (JSONException e) {  
-				Log.e("JSON", "There was an error parsing the JSON", e);  
+				Log.e(TAG, "There was an error parsing the JSON", e);  
 			}
 		}
 	}
@@ -102,13 +103,10 @@ public class DistanceContextProvider extends ContextProvider {
 		
 		@Override
 		public void onLocationChanged(Location location) {
-			/* String from = "-22.9575,-43.196797";
-			 * String to = "-22.977415,-43.233876"; */
-
 			parent.currentlocation = String.format("%g,%g", location.getLongitude(), location.getLatitude());
 			Log.i(TAG, "Current Location: " + currentlocation );
 
-			parent.handler.post(new DistanceGetter(parent.currentlocation, parent.destination));
+			parent.handler.post(new DistanceGetter(parent.currentlocation, parent.destination, parent.auth_token));
 		}
 
 		@Override
@@ -151,7 +149,7 @@ public class DistanceContextProvider extends ContextProvider {
 		addConfigurationSuported("destination");
 		addConfigurationSuported("refreshInterval");
 
-		Log.d("distancecontextprovider", "Provedor de Distancia Inicializado! (v2.17)");
+		Log.d(TAG, "Provedor de Distancia Inicializado! (v2.17)");
 	}
 
 	@Override
@@ -221,22 +219,22 @@ public class DistanceContextProvider extends ContextProvider {
 		try {
 			Log.i(TAG, "Querying URL:" + url);
 			response = httpclient.execute(httpget);  
-			// Log.i(TAG, "Status:[" + response.getStatusLine().toString() + "]");  
+			Log.i(TAG, "Status:[" + response.getStatusLine().toString() + "]");  
 			HttpEntity entity = response.getEntity();  
 
 			if (entity != null) {  
 
 				InputStream instream = entity.getContent();  
 				String result = convertStreamToString(instream);  
-				// Log.i(TAG, "Result of converstion: [" + result + "]");  
+				Log.i(TAG, "Result of converstion: [" + result + "]");  
 
 				instream.close();  
 				return result;  
 			}  
 		} catch (ClientProtocolException e) {  
-			Log.e("mapa", "There was a protocol based error", e);  
+			Log.e(TAG, "There was a protocol based error", e);  
 		} catch (IOException e) {  
-			Log.e("mapa", "There was an IO Stream related error", e);  
+			Log.e(TAG, "There was an IO Stream related error", e);  
 		}
 		return null;  
 	}
